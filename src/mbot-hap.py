@@ -11,8 +11,7 @@ def FindJoystick():
         if joystick_count == 0:
                 print("No joystick detected :-(")
                 print("Connect a joystick or game controller and start again...")
-                pygame.quit()
-                exit()
+                return None
 
         joystick = pygame.joystick.Joystick(0)
         joystick.init()
@@ -29,7 +28,7 @@ def FindMBot():
     except Exception as err:
         print(f"Could not initialize mBot {err=}, {type(err)=}")
         print("Insert a 2.4GHz-dongle, turn on the mBot and start again...")
-        exit()
+        return None
 
 def scale_image(image):
     img_width, img_height = image.get_size()
@@ -58,6 +57,10 @@ game_controls_allowed = False
 MCAST_GRP = '224.1.1.1'
 MCAST_PORT = 5007
 
+# Load the avatar images into a list
+image_paths = ["resources/dragon_800x800.jpg", "resources/panda_800x800.jpg", "resources/turtle_800x800.jpg", "resources/unicorn_800x800.jpg"]
+images = [pygame.image.load(path) for path in image_paths]
+
 if __name__ == '__main__':
 
     # Create a UDP socket
@@ -80,14 +83,12 @@ if __name__ == '__main__':
     pygame.joystick.init()
     joystick = FindJoystick()
 
-    # Load the avatar images into a list
-    image_paths = ["resources/dragon_800x800.jpg", "resources/panda_800x800.jpg", "resources/turtle_800x800.jpg", "resources/unicorn_800x800.jpg"]
-    images = [pygame.image.load(path) for path in image_paths]
+
 
     axis_throttle = AXIS_GAMEPAD_JOYLEFT_UPDOWN
     axis_turn = AXIS_GAMEPAD_JOYLEFT_LEFTRIGHT
     button_sound = BUTTON_GAMEPAD_RIGHT_THUMB_1
-    sound_paths = ["resources/dragon.wav", "panda.wav", "turtle.wav", "unicorn.wav"]
+    sound_paths = ["resources/dragon.wav", "resources/panda.wav", "resources/turtle.wav", "resources/unicorn.wav"]
 
     # Get screen dimensions
     screen_info = pygame.display.Info()
@@ -130,6 +131,8 @@ if __name__ == '__main__':
                     sys.exit()
                 elif event.key == pygame.K_a:  # Change the image when 'a' is pressed
                     current_image_index = (current_image_index + 1) % len(scaled_images)
+                    toetSound = pygame.mixer.Sound(sound_paths[current_image_index])
+                    pygame.mixer.Sound.play(toetSound)
                 elif event.key == pygame.K_t:
                     game_play_time += 10
                     if game_play_time > game_max_time:
@@ -184,28 +187,32 @@ if __name__ == '__main__':
 
         pygame.display.flip()
 
-          # Button not pushed? Remember it! Than you're allowed to play a sound once the button is pushed
-        if( joystick.get_button(button_sound) == 0 ):
-                buttonReleased = True
-        else:
-                # The button is pushed => Only play a new sound if it was not yet pushed before
-                if( buttonReleased ):
-                        pygame.mixer.Sound.play(toetSound)
-                buttonReleased = False
+       
+        if joystick is not None:
 
-        # Calculate the sped of each wheel
-        speed = -joystick.get_axis(axis_throttle)
-        turn = joystick.get_axis(axis_turn)
+            # Button not pushed? Remember it! Than you're allowed to play a sound once the button is pushed
+            if( joystick.get_button(button_sound) == 0 ):
+                    buttonReleased = True
+            else:
+                    # The button is pushed => Only play a new sound if it was not yet pushed before
+                    if( buttonReleased ):
+                            pygame.mixer.Sound.play(toetSound)
+                    buttonReleased = False
 
-        speedLeft = speed
-        if( turn < 0 ):
-                speedLeft += 2 * turn * speed
+            # Calculate the sped of each wheel
+            speed = -joystick.get_axis(axis_throttle)
+            turn = joystick.get_axis(axis_turn)
 
-        speedRight = speed
-        if( turn > 0):
-                speedRight -= 2 * turn * speed
+            speedLeft = speed
+            if( turn < 0 ):
+                    speedLeft += 2 * turn * speed
 
-        print( "speed: " + str(speed) + " -- turn: " + str(turn) + " => speedLeft: " + str(speedLeft) + " -- speedRight: " + str(speedRight))
-        
-        # Send the speeds to the mBot / mBoot
-        bot.doMove( (int)(speedLeft * 255), (int)(speedRight * 255))
+            speedRight = speed
+            if( turn > 0):
+                    speedRight -= 2 * turn * speed
+
+            print( "speed: " + str(speed) + " -- turn: " + str(turn) + " => speedLeft: " + str(speedLeft) + " -- speedRight: " + str(speedRight))
+            
+            # Send the speeds to the mBot / mBoot
+            if bot is not None:
+                bot.doMove( (int)(speedLeft * 255), (int)(speedRight * 255))
