@@ -17,7 +17,6 @@ def FindJoystick():
         joystick.init()
         print( "Yes! I found " + str(joystick_count) + " joystick" + ("" if joystick_count == 1 else "s"))
         print( "I will use this one: '" + joystick.get_name() + "'")
-
         return joystick
 
 def FindMBot():
@@ -82,8 +81,6 @@ if __name__ == '__main__':
     pygame.init()
     pygame.joystick.init()
     joystick = FindJoystick()
-
-
 
     axis_throttle = AXIS_GAMEPAD_JOYLEFT_UPDOWN
     axis_turn = AXIS_GAMEPAD_JOYLEFT_LEFTRIGHT
@@ -186,7 +183,6 @@ if __name__ == '__main__':
         screen.blit(text_time, (screen_right_mid - text_time.get_width() // 2, screen.get_height() * 0.39 - text_time.get_height()/2 ))
 
         pygame.display.flip()
-
        
         if joystick is not None:
 
