@@ -6,7 +6,7 @@ import time
 import socket
 import struct
 
-def FindJoystick():
+def findJoystick():
         joystick_count = pygame.joystick.get_count()
         if joystick_count == 0:
                 print("No joystick detected :-(")
@@ -19,7 +19,7 @@ def FindJoystick():
         print( "I will use this one: '" + joystick.get_name() + "'")
         return joystick
 
-def FindMBot():
+def findMBot():
     try:
         bot = mBot()
         bot.startWithHID()
@@ -29,14 +29,14 @@ def FindMBot():
         print("Insert a 2.4GHz-dongle, turn on the mBot and start again...")
         return None
 
-def ScaleImage(image):
+def scaleImage(image):
     img_width, img_height = image.get_size()
     aspect_ratio = img_width / img_height
     new_width = int(screen_height * aspect_ratio)
     new_height = screen_height
     return pygame.transform.scale(image, (new_width, new_height))
 
-def LoadAvatarImages():
+def loadAvatarImages():
     image_paths = [
         "resources/dragon_800x800.jpg",
         "resources/panda_800x800.jpg",
@@ -44,7 +44,7 @@ def LoadAvatarImages():
         "resources/unicorn_800x800.jpg"]
     return [pygame.image.load(path) for path in image_paths]
     
-def OpenSocket():
+def openSocket():
      # Create a UDP socket
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
 
@@ -61,6 +61,63 @@ def OpenSocket():
     sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
 
     return sock
+
+# Credits to https://www.instructables.com/Joystick-to-Differential-Drive-Python/
+def joystickToDiff(x, y, minJoystick, maxJoystick, minSpeed, maxSpeed):
+    # If x and y are 0, then there is not much to calculate...
+	if x == 0 and y == 0:
+		return (0, 0)
+    
+	# First Compute the angle in deg
+	# First hypotenuse
+	z = math.sqrt(x * x + y * y)
+
+	# angle in radians
+	rad = math.acos(math.fabs(x) / z)
+
+	# and in degrees
+	angle = rad * 180 / math.pi
+
+	# Now angle indicates the measure of turn
+	# Along a straight line, with an angle o, the turn co-efficient is same
+	# this applies for angles between 0-90, with angle 0 the coeff is -1
+	# with angle 45, the co-efficient is 0 and with angle 90, it is 1
+
+	tcoeff = -1 + (angle / 90) * 2
+	turn = tcoeff * math.fabs(math.fabs(y) - math.fabs(x))
+	turn = round(turn * 100, 0) / 100
+
+	# And max of y or x is the movement
+	mov = max(math.fabs(y), math.fabs(x))
+
+	# First and third quadrant
+	if (x >= 0 and y >= 0) or (x < 0 and y < 0):
+		rawLeft = mov
+		rawRight = turn
+	else:
+		rawRight = mov
+		rawLeft = turn
+
+	# Reverse polarity
+	if y < 0:
+		rawLeft = 0 - rawLeft
+		rawRight = 0 - rawRight
+
+	# minJoystick, maxJoystick, minSpeed, maxSpeed
+	# Map the values onto the defined rang
+	rightOut = map(rawRight, minJoystick, maxJoystick, minSpeed, maxSpeed)
+	leftOut = map(rawLeft, minJoystick, maxJoystick, minSpeed, maxSpeed)
+
+	return (rightOut, leftOut)
+
+def map(v, in_min, in_max, out_min, out_max):
+	# Check that the value is at least in_min
+	if v < in_min:
+		v = in_min
+	# Check that the value is at most in_max
+	if v > in_max:
+		v = in_max
+	return (v - in_min) * (out_max - out_min) // (in_max - in_min) + out_min
 
 # Constants for the usb game controller
 AXIS_GAMEPAD_JOYLEFT_UPDOWN = 1
@@ -84,15 +141,15 @@ game_avatar_index = 0
 if __name__ == '__main__':
 
     # Load the avatar images into a list
-    avatar_images = LoadAvatarImages()
+    avatar_images = loadAvatarImages()
 
     # Create a UDP socket
-    sock = OpenSocket()
+    sock = openSocket()
 
     # Initialize PyGame & joystick
     pygame.init()
     pygame.joystick.init()
-    joystick = FindJoystick()
+    joystick = findJoystick()
 
     axis_throttle = AXIS_GAMEPAD_JOYLEFT_UPDOWN
     axis_turn = AXIS_GAMEPAD_JOYLEFT_LEFTRIGHT
@@ -100,7 +157,7 @@ if __name__ == '__main__':
     sound_paths = ["resources/dragon.wav", "resources/panda.wav", "resources/turtle.wav", "resources/unicorn.wav"]
 
     # Set up the screen to be fullscreen
-    #screen = pygame.display.set_mode((800, 600))
+    #screen = pygame.display.set_mode((1200, 600))
     screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
     screen_info = pygame.display.Info()
     screen_width = screen_info.current_w
@@ -108,22 +165,28 @@ if __name__ == '__main__':
     screen_right_mid = screen_height + (screen_width - screen_height) // 2
 
     # Scale all the images
-    scaled_images = [ScaleImage(image) for image in avatar_images]
+    scaled_images = [scaleImage(image) for image in avatar_images]
 
     # Create fonts
     pygame.font.init()
     font_controls = pygame.font.SysFont("Consolas", 20)
     font_time = pygame.font.SysFont("Consolas", 76)
 
+    # Load sounds
+    sound_attention = pygame.mixer.Sound("resources/attention.wav")
+    sound_plingplong = pygame.mixer.Sound("resources/plingplong.wav")
+    sound_gameover = pygame.mixer.Sound("resources/gameover.wav")
+    last_sound = ""
+
     # Connect with the mBot
-    bot = FindMBot()
+    bot = findMBot()
 
     # Main loop
     while True:
 
         time_elapsed = time.time() - game_start_time
         game_controls_allowed = (time_elapsed > game_getready_time) and (time_elapsed < (game_getready_time + game_play_time))
-        toetSound = pygame.mixer.Sound(sound_paths[game_avatar_index])
+        sound_toet = pygame.mixer.Sound(sound_paths[game_avatar_index])
 
         # Process PyGame events
         for event in pygame.event.get():
@@ -142,8 +205,8 @@ if __name__ == '__main__':
                 # A => Next avatar
                 elif event.key == pygame.K_a:
                     game_avatar_index = (game_avatar_index + 1) % len(scaled_images)
-                    toetSound = pygame.mixer.Sound(sound_paths[game_avatar_index])
-                    pygame.mixer.Sound.play(toetSound)
+                    sound_toet = pygame.mixer.Sound(sound_paths[game_avatar_index])
+                    pygame.mixer.Sound.play(sound_toet)
             
                 # T => Add 10 seconds to game time & broadcast new game time
                 elif event.key == pygame.K_t:
@@ -179,10 +242,18 @@ if __name__ == '__main__':
         screen.blit(text_controls, (screen_right_mid - text_controls.get_width() // 2, screen.get_height() - text_controls.get_height() - 60))
 
         # Render the game text & progress bar
-        text_time_text = 'Game Over!'
+        
+        game_controls_allowed = False
         if time_elapsed < game_getready_time:
+            if last_sound != "READY":
+                last_sound = "READY"
+                sound_plingplong.play()
             text_time_text = 'Get ready...'
         elif time_elapsed < (game_getready_time + game_play_time):
+            if last_sound != "GO":
+                last_sound = "GO"
+                sound_attention.play()
+            game_controls_allowed = True
             text_time_text = 'GO!'
             percent_played = (time_elapsed - game_getready_time) / game_play_time
             start_angle = math.pi/2 - percent_played * 2 * math.pi
@@ -192,6 +263,11 @@ if __name__ == '__main__':
             arc_rect = (screen_right_mid - arc_r, screen.get_height() * 0.39 - arc_r, 2*arc_r, 2*arc_r)
             pygame.draw.arc(screen, (64, 64, 64), arc_rect, 0, 2 * math.pi, arc_w)
             pygame.draw.arc(screen, (255, 128, 0), arc_rect, start_angle, end_angle, arc_w)
+        else:
+            if last_sound != "GAMEOVER":
+                last_sound = "GAMEOVER"
+                sound_gameover.play()
+            text_time_text = 'Game Over!'
         text_time = font_time.render(text_time_text, True, (128, 255, 0))
         screen.blit(text_time, (screen_right_mid - text_time.get_width() // 2, screen.get_height() * 0.39 - text_time.get_height()/2 ))
 
@@ -203,7 +279,8 @@ if __name__ == '__main__':
         # Update the screen
         pygame.display.flip()
        
-        if (joystick is not None) and (bot is not None):
+        motor_out = (0, 0) 
+        if (joystick is not None) and game_controls_allowed:
 
             # Button not pushed? Remember it! Than you're allowed to play a sound once the button is pushed
             if( joystick.get_button(button_sound) == 0 ):
@@ -211,22 +288,17 @@ if __name__ == '__main__':
             else:
                     # The button is pushed => Only play a new sound if it was not yet pushed before
                     if( game_button_released ):
-                            pygame.mixer.Sound.play(toetSound)
+                            pygame.mixer.Sound.play(sound_toet)
                     game_button_released = False
 
             # Calculate the sped of each wheel
-            speed = -joystick.get_axis(axis_throttle)
-            turn = joystick.get_axis(axis_turn)
+            throttle = -joystick.get_axis(axis_throttle)
+            turn = -joystick.get_axis(axis_turn)
+            motor_out = joystickToDiff(turn, throttle, -1.0, 1.0, -255, 255)
 
-            speedLeft = speed
-            if( turn < 0 ):
-                    speedLeft += 2 * turn * speed
+            print( "throttle: " + str(throttle) + " -- turn: " + str(turn) + " => left: " + str(motor_out[0]) + " -- right: " + str(motor_out[1]))
 
-            speedRight = speed
-            if( turn > 0):
-                    speedRight -= 2 * turn * speed
-
-            print( "speed: " + str(speed) + " -- turn: " + str(turn) + " => speedLeft: " + str(speedLeft) + " -- speedRight: " + str(speedRight))
-            
-            # Send the speeds to the mBot / mBoot
-            bot.doMove( (int)(speedLeft * 255), (int)(speedRight * 255))
+        if (bot is not None):
+             # Send the speeds to the mBot / mBoot
+            bot.doMove( (int)(motor_out[0]), (int)(motor_out[1]))  
+           
