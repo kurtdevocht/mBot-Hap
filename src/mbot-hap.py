@@ -36,13 +36,22 @@ def scale_image(image):
     new_height = screen_height
     return pygame.transform.scale(image, (new_width, new_height))
 
+def LoadAvatarImages():
+    image_paths = [
+        "resources/dragon_800x800.jpg",
+        "resources/panda_800x800.jpg",
+        "resources/turtle_800x800.jpg",
+        "resources/unicorn_800x800.jpg"]
+    return [pygame.image.load(path) for path in image_paths]
+
 # Constants for the usb game controller
 AXIS_GAMEPAD_JOYLEFT_UPDOWN = 1
 AXIS_GAMEPAD_JOYLEFT_LEFTRIGHT = 0
 BUTTON_GAMEPAD_RIGHT_THUMB_1 = 0
 
-# True if the button was released (to detect edges)
-buttonReleased = False
+# Networking / multicating
+MCAST_GRP = '224.1.1.1'
+MCAST_PORT = 5007
 
 # Game state
 game_start_time = 0
@@ -50,15 +59,11 @@ game_getready_time = 3
 game_play_time = 100
 game_max_time = 300
 game_min_time = 20
-game_controls_allowed = False
-
-# Multicast group IP and port
-MCAST_GRP = '224.1.1.1'
-MCAST_PORT = 5007
+game_controls_allowed = False # True if it's ok to control the mBot
+game_button_released = False # True if the button was released (to detect edges)
 
 # Load the avatar images into a list
-image_paths = ["resources/dragon_800x800.jpg", "resources/panda_800x800.jpg", "resources/turtle_800x800.jpg", "resources/unicorn_800x800.jpg"]
-images = [pygame.image.load(path) for path in image_paths]
+avatar_images = LoadAvatarImages()
 
 if __name__ == '__main__':
 
@@ -94,7 +99,7 @@ if __name__ == '__main__':
     screen_right_mid = screen_height + (screen_width - screen_height) // 2
 
     # Scale all the images
-    scaled_images = [scale_image(image) for image in images]
+    scaled_images = [scale_image(image) for image in avatar_images]
 
     # Set up the screen to be fullscreen
     screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
@@ -188,12 +193,12 @@ if __name__ == '__main__':
 
             # Button not pushed? Remember it! Than you're allowed to play a sound once the button is pushed
             if( joystick.get_button(button_sound) == 0 ):
-                    buttonReleased = True
+                    game_button_released = True
             else:
                     # The button is pushed => Only play a new sound if it was not yet pushed before
-                    if( buttonReleased ):
+                    if( game_button_released ):
                             pygame.mixer.Sound.play(toetSound)
-                    buttonReleased = False
+                    game_button_released = False
 
             # Calculate the sped of each wheel
             speed = -joystick.get_axis(axis_throttle)
