@@ -6,6 +6,25 @@ import time
 import socket
 import struct
 
+# Constants for the usb game controller
+AXIS_GAMEPAD_JOYLEFT_UPDOWN = 1
+AXIS_GAMEPAD_JOYLEFT_LEFTRIGHT = 0
+BUTTON_GAMEPAD_RIGHT_THUMB_1 = 0
+
+# Networking / multicating
+MCAST_GRP = '224.1.1.1'
+MCAST_PORT = 5007
+
+# Game state
+game_start_time = 0
+game_getready_time = 3
+game_play_time = 100
+game_max_time = 300
+game_min_time = 20
+game_controls_allowed = False # True if it's ok to control the mBot
+game_button_released = False # True if the button was released (to detect edges)
+game_avatar_index = 0
+
 def findJoystick():
         joystick_count = pygame.joystick.get_count()
         if joystick_count == 0:
@@ -43,6 +62,21 @@ def loadAvatarImages():
         "resources/turtle_800x800.jpg",
         "resources/unicorn_800x800.jpg"]
     return [pygame.image.load(path) for path in image_paths]
+
+def loadAvatarSounds():
+    sound_paths = [
+        "resources/dragon.wav",
+        "resources/panda.wav",
+        "resources/turtle.wav",
+        "resources/unicorn.wav"]
+    return [pygame.mixer.Sound(path) for path in sound_paths]
+
+def setAvatar(bot, index, colors, sounds):
+    pygame.mixer.Sound.play(sounds[index])
+    if(bot is not None):
+        rgb = colors[index]
+        bot.doRGBLedOnBoard(0, rgb[0], rgb[1], rgb[2])
+   
     
 def openSocket():
      # Create a UDP socket
@@ -119,43 +153,22 @@ def map(v, in_min, in_max, out_min, out_max):
 		v = in_max
 	return (v - in_min) * (out_max - out_min) // (in_max - in_min) + out_min
 
-# Constants for the usb game controller
-AXIS_GAMEPAD_JOYLEFT_UPDOWN = 1
-AXIS_GAMEPAD_JOYLEFT_LEFTRIGHT = 0
-BUTTON_GAMEPAD_RIGHT_THUMB_1 = 0
-
-# Networking / multicating
-MCAST_GRP = '224.1.1.1'
-MCAST_PORT = 5007
-
-# Game state
-game_start_time = 0
-game_getready_time = 3
-game_play_time = 100
-game_max_time = 300
-game_min_time = 20
-game_controls_allowed = False # True if it's ok to control the mBot
-game_button_released = False # True if the button was released (to detect edges)
-game_avatar_index = 0
-
 if __name__ == '__main__':
 
-    # Load the avatar images into a list
-    avatar_images = loadAvatarImages()
-
-    # Create a UDP socket
-    sock = openSocket()
-
-    # Initialize PyGame & joystick
+ # Initialize PyGame & joystick
     pygame.init()
     pygame.joystick.init()
     joystick = findJoystick()
 
+   
+
+    # Create a UDP socket
+    sock = openSocket()
+
     axis_throttle = AXIS_GAMEPAD_JOYLEFT_UPDOWN
     axis_turn = AXIS_GAMEPAD_JOYLEFT_LEFTRIGHT
     button_sound = BUTTON_GAMEPAD_RIGHT_THUMB_1
-    sound_paths = ["resources/dragon.wav", "resources/panda.wav", "resources/turtle.wav", "resources/unicorn.wav"]
-
+    
     # Set up the screen to be fullscreen
     #screen = pygame.display.set_mode((1200, 600))
     screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
@@ -163,9 +176,6 @@ if __name__ == '__main__':
     screen_width = screen_info.current_w
     screen_height = screen_info.current_h
     screen_right_mid = screen_height + (screen_width - screen_height) // 2
-
-    # Scale all the images
-    scaled_images = [scaleImage(image) for image in avatar_images]
 
     # Create fonts
     pygame.font.init()
@@ -181,12 +191,18 @@ if __name__ == '__main__':
     # Connect with the mBot
     bot = findMBot()
 
+     # Load the avatar images into a list
+    avatar_images = loadAvatarImages()
+    scaled_images = [scaleImage(image) for image in avatar_images]
+    avatar_sounds = loadAvatarSounds()
+    avatar_leds =  [(238, 58, 93), (182, 255, 0), (200, 0, 0), (100, 150, 255)]
+    setAvatar(bot, game_avatar_index, avatar_leds, avatar_sounds)
+
     # Main loop
     while True:
 
         time_elapsed = time.time() - game_start_time
         game_controls_allowed = (time_elapsed > game_getready_time) and (time_elapsed < (game_getready_time + game_play_time))
-        sound_toet = pygame.mixer.Sound(sound_paths[game_avatar_index])
 
         # Process PyGame events
         for event in pygame.event.get():
@@ -205,8 +221,7 @@ if __name__ == '__main__':
                 # A => Next avatar
                 elif event.key == pygame.K_a:
                     game_avatar_index = (game_avatar_index + 1) % len(scaled_images)
-                    sound_toet = pygame.mixer.Sound(sound_paths[game_avatar_index])
-                    pygame.mixer.Sound.play(sound_toet)
+                    setAvatar(bot, game_avatar_index, avatar_leds, avatar_sounds)
             
                 # T => Add 10 seconds to game time & broadcast new game time
                 elif event.key == pygame.K_t:
@@ -288,7 +303,7 @@ if __name__ == '__main__':
             else:
                     # The button is pushed => Only play a new sound if it was not yet pushed before
                     if( game_button_released ):
-                            pygame.mixer.Sound.play(sound_toet)
+                            pygame.mixer.Sound.play(avatar_sounds[game_avatar_index])
                     game_button_released = False
 
             # Calculate the sped of each wheel
@@ -302,3 +317,4 @@ if __name__ == '__main__':
              # Send the speeds to the mBot / mBoot
             bot.doMove( (int)(motor_out[0]), (int)(motor_out[1]))  
            
+
