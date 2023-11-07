@@ -29,7 +29,7 @@ sound_button_released = False # True if the button was released (to detect edges
 select_button_released = False # True if the button was released (to detect edges)
 game_avatar_index = 0
 control_mode = 0
-control_mode_max = 1
+control_mode_max = 2
 
 def findJoystick():
         joystick_count = pygame.joystick.get_count()
@@ -175,10 +175,12 @@ if __name__ == '__main__':
     # Create a UDP socket
     sock = openSocket()
 
-    axis_throttle = AXIS_GAMEPAD_JOYRIGHT_UPDOWN
-    axis_turn = AXIS_GAMEPAD_JOYRIGHT_LEFTRIGHT
-    axis_throttle_l = AXIS_GAMEPAD_JOYLEFT_UPDOWN
-    axis_throttle_r = AXIS_GAMEPAD_JOYRIGHT_UPDOWN
+    ctrl0_axis_throttle = AXIS_GAMEPAD_JOYLEFT_UPDOWN
+    ctrl0_axis_turn = AXIS_GAMEPAD_JOYLEFT_LEFTRIGHT
+    ctrl1_axis_throttle = AXIS_GAMEPAD_JOYLEFT_UPDOWN
+    ctrl1_axis_turn = AXIS_GAMEPAD_JOYRIGHT_LEFTRIGHT
+    ctrl2_axis_throttle_l = AXIS_GAMEPAD_JOYLEFT_UPDOWN
+    ctrl2_axis_throttle_r = AXIS_GAMEPAD_JOYRIGHT_UPDOWN
     button_sound = BUTTON_GAMEPAD_RIGHT_THUMB_1
     button_select_control = BUTTON_GAMEPAD_SELECT
     
@@ -334,17 +336,23 @@ if __name__ == '__main__':
             motor_out=(0,0)
 
             if( control_mode == 0 ):
-                # Differential drive
-                throttle = -joystick.get_axis(axis_throttle)
-                turn = -joystick.get_axis(axis_turn)
+                # Differential drive - 1 joystick
+                throttle = -joystick.get_axis(ctrl0_axis_throttle)
+                turn = -joystick.get_axis(ctrl0_axis_turn)
                 motor_out = joystickToDiff(turn, throttle, -1.0, 1.0, -255, 255)
-                print( "Differential drive -- throttle: " + str(throttle) + " -- turn: " + str(turn) + " => left: " + str(motor_out[0]) + " -- right: " + str(motor_out[1]))
+                print( "Differential drive (0) -- throttle: " + str(throttle) + " -- turn: " + str(turn) + " => left: " + str(motor_out[0]) + " -- right: " + str(motor_out[1]))
+            elif( control_mode == 1 ):
+                # Differential drive
+                throttle = -joystick.get_axis(ctrl1_axis_throttle)
+                turn = -joystick.get_axis(ctrl1_axis_turn)
+                motor_out = joystickToDiff(turn, throttle, -1.0, 1.0, -255, 255)
+                print( "Differential drive (1) -- throttle: " + str(throttle) + " -- turn: " + str(turn) + " => left: " + str(motor_out[0]) + " -- right: " + str(motor_out[1]))
             else:
                 # Tank mode
-                throttle_l = -joystick.get_axis(axis_throttle_r)
-                throttle_r = -joystick.get_axis(axis_throttle_l)
+                throttle_l = -joystick.get_axis(ctrl2_axis_throttle_r)
+                throttle_r = -joystick.get_axis(ctrl2_axis_throttle_l)
                 motor_out = joystickToTank(throttle_r, throttle_l, -1.0, 1.0, -255, 255)
-                print( "Tank drive -- Throttle L: " + str(throttle_l) + " -- Throttle R: " + str(throttle_r) + " => left: " + str(motor_out[0]) + " -- right: " + str(motor_out[1]))
+                print( "Tank drive (2) -- Throttle L: " + str(throttle_l) + " -- Throttle R: " + str(throttle_r) + " => left: " + str(motor_out[0]) + " -- right: " + str(motor_out[1]))
 
         if (bot is not None):
              # Send the speeds to the mBot / mBoot
