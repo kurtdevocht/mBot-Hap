@@ -9,7 +9,10 @@ import struct
 # Constants for the usb game controller
 AXIS_GAMEPAD_JOYLEFT_UPDOWN = 1
 AXIS_GAMEPAD_JOYLEFT_LEFTRIGHT = 0
+AXIS_GAMEPAD_JOYRIGHT_UPDOWN = 3
+AXIS_GAMEPAD_JOYRIGHT_LEFTRIGHT = 2
 BUTTON_GAMEPAD_RIGHT_THUMB_1 = 0
+BUTTON_GAMEPAD_SELECT = 8
 
 # Networking / multicating
 MCAST_GRP = '224.1.1.1'
@@ -22,8 +25,11 @@ game_play_time = 100
 game_max_time = 300
 game_min_time = 20
 game_controls_allowed = False # True if it's ok to control the mBot
-game_button_released = False # True if the button was released (to detect edges)
+sound_button_released = False # True if the button was released (to detect edges)
+select_button_released = False # True if the button was released (to detect edges)
 game_avatar_index = 0
+control_mode = 0
+control_mode_max = 1
 
 def findJoystick():
         joystick_count = pygame.joystick.get_count()
@@ -95,6 +101,10 @@ def openSocket():
     sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
 
     return sock
+def joystickToTank(inputLeft, inputRight, minJoystick, maxJoystick, minSpeed, maxSpeed):
+    leftOut = map(inputLeft, minJoystick, maxJoystick, minSpeed, maxSpeed)
+    rightOut = map(inputRight, minJoystick, maxJoystick, minSpeed, maxSpeed)
+    return (leftOut, rightOut)
 
 # Credits to https://www.instructables.com/Joystick-to-Differential-Drive-Python/
 def joystickToDiff(x, y, minJoystick, maxJoystick, minSpeed, maxSpeed):
@@ -139,10 +149,10 @@ def joystickToDiff(x, y, minJoystick, maxJoystick, minSpeed, maxSpeed):
 
 	# minJoystick, maxJoystick, minSpeed, maxSpeed
 	# Map the values onto the defined rang
-	rightOut = map(rawRight, minJoystick, maxJoystick, minSpeed, maxSpeed)
-	leftOut = map(rawLeft, minJoystick, maxJoystick, minSpeed, maxSpeed)
+	rightOut = map(rawLeft, minJoystick, maxJoystick, minSpeed, maxSpeed)
+	leftOut = map(rawRight, minJoystick, maxJoystick, minSpeed, maxSpeed)
 
-	return (rightOut, leftOut)
+	return (leftOut, rightOut)
 
 def map(v, in_min, in_max, out_min, out_max):
 	# Check that the value is at least in_min
@@ -165,9 +175,12 @@ if __name__ == '__main__':
     # Create a UDP socket
     sock = openSocket()
 
-    axis_throttle = AXIS_GAMEPAD_JOYLEFT_UPDOWN
-    axis_turn = AXIS_GAMEPAD_JOYLEFT_LEFTRIGHT
+    axis_throttle = AXIS_GAMEPAD_JOYRIGHT_UPDOWN
+    axis_turn = AXIS_GAMEPAD_JOYRIGHT_LEFTRIGHT
+    axis_throttle_l = AXIS_GAMEPAD_JOYLEFT_UPDOWN
+    axis_throttle_r = AXIS_GAMEPAD_JOYRIGHT_UPDOWN
     button_sound = BUTTON_GAMEPAD_RIGHT_THUMB_1
+    button_select_control = BUTTON_GAMEPAD_SELECT
     
     # Set up the screen to be fullscreen
     #screen = pygame.display.set_mode((1200, 600))
@@ -299,22 +312,42 @@ if __name__ == '__main__':
 
             # Button not pushed? Remember it! Than you're allowed to play a sound once the button is pushed
             if( joystick.get_button(button_sound) == 0 ):
-                    game_button_released = True
+                    sound_button_released = True
             else:
                     # The button is pushed => Only play a new sound if it was not yet pushed before
-                    if( game_button_released ):
+                    if( sound_button_released ):
                             pygame.mixer.Sound.play(avatar_sounds[game_avatar_index])
-                    game_button_released = False
+                    sound_button_released = False
 
-            # Calculate the sped of each wheel
-            throttle = -joystick.get_axis(axis_throttle)
-            turn = -joystick.get_axis(axis_turn)
-            motor_out = joystickToDiff(turn, throttle, -1.0, 1.0, -255, 255)
+             # Button not pushed? Remember it! Than you're allowed to play a sound once the button is pushed
+            if( joystick.get_button(button_select_control) == 0 ):
+                    select_button_released = True
+            else:
+                    # The button is pushed => Only play a new sound if it was not yet pushed before
+                    if( select_button_released ):
+                            # switch to the next control mode
+                            control_mode = (control_mode + 1) % (control_mode_max + 1)
+                            print( "control_mode: " + str(control_mode))
+                    select_button_released = False
 
-            print( "throttle: " + str(throttle) + " -- turn: " + str(turn) + " => left: " + str(motor_out[0]) + " -- right: " + str(motor_out[1]))
+            # Calculate the speed of each wheel
+            motor_out=(0,0)
+
+            if( control_mode == 0 ):
+                # Differential drive
+                throttle = -joystick.get_axis(axis_throttle)
+                turn = -joystick.get_axis(axis_turn)
+                motor_out = joystickToDiff(turn, throttle, -1.0, 1.0, -255, 255)
+                print( "Differential drive -- throttle: " + str(throttle) + " -- turn: " + str(turn) + " => left: " + str(motor_out[0]) + " -- right: " + str(motor_out[1]))
+            else:
+                # Tank mode
+                throttle_l = -joystick.get_axis(axis_throttle_r)
+                throttle_r = -joystick.get_axis(axis_throttle_l)
+                motor_out = joystickToTank(throttle_r, throttle_l, -1.0, 1.0, -255, 255)
+                print( "Tank drive -- Throttle L: " + str(throttle_l) + " -- Throttle R: " + str(throttle_r) + " => left: " + str(motor_out[0]) + " -- right: " + str(motor_out[1]))
 
         if (bot is not None):
              # Send the speeds to the mBot / mBoot
-            bot.doMove( (int)(motor_out[0]), (int)(motor_out[1]))  
+            bot.doMove( (int)(motor_out[0]), (int)(motor_out[1]))
            
 
