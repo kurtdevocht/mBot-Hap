@@ -8,6 +8,7 @@ If you're rich, you can set up up to 4 laptops (each connected to an mBot and ga
 - An mBot with a 2.4GHz-dongle (or coding skills to make this code work with a bluetooth version, or with another type of robot)
 - An usb game controller like [this one](https://www.kabelshop.nl/Gembird-Controller-pc-Gembird-2-controllers-USB-Vibratie-D-pad-10-knoppen-2-joysticks-JPD-UDV2-01-i24279-t1437173.html) (or coding skills to make it work with other controllers)
 ## Get it running
+- Download this repository as a zip file, **unblock** the zip file and extract it
 - Install [Python 3.11](https://www.python.org/)
 - Install the following Python libraries:
 ```
@@ -33,6 +34,7 @@ UDP multicasting is used to synchronise the computers. Fot this, the computers n
 **Nerd-tip:** I'ts quite easy to hack the game by intercepting the broadcasted UDP messages 🤓
 ## Controlling the game
 Keyboard keys:
+- **ESC** - Didn't you like the game?
 - **A** - Selects the game avatar. The leds on the mBot will get a corresponding color
 - **T** - Set the game time
 - **S** - Start the game
