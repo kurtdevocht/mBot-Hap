@@ -6,7 +6,7 @@ If you're rich, you can set up up to 4 laptops (each connected to an mBot and ga
 ## What you need
 - A computer. It's not tested on non-Windows computers, but it might work... 
 - An mBot with a 2.4GHz-dongle (or coding skills to make this code work with a bluetooth version, or with another type of robot)
-- An usb game controller like [this one](https://www.kabelshop.nl/Gembird-Controller-pc-Gembird-2-controllers-USB-Vibratie-D-pad-10-knoppen-2-joysticks-JPD-UDV2-01-i24279-t1437173.html) (or coding skills to make it work with other controllers)
+- A usb game controller like [this one](https://www.kabelshop.nl/Gembird-Controller-pc-Gembird-2-controllers-USB-Vibratie-D-pad-10-knoppen-2-joysticks-JPD-UDV2-01-i24279-t1437173.html) (or coding skills to make it work with other controllers)
 ## Get it running
 - Download this repository as a zip file, **unblock** the zip file and extract it
 - Install [Python 3.11](https://www.python.org/)
