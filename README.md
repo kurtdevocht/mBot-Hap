@@ -26,6 +26,8 @@ python mbot-hap.py
 ```
 - **NOTE** - On Windows, python.exe is usually installed in *C:\Users\YourUserName\AppData\Local\Programs\Python\Python312\python.exe* (change *YourUserName* and Python version) and might be added to the path. If python is not recognized, add its folder to your PATH environment variable, or adapt and run the helper script **run.bat**
 
+- **NOTE** - On Windows, running python.exe might launch the Microsoft Store App. If so, use the Windows search bar to find "Manage app execution aliases" and disable the python aliases.
+
 ## Create a network
 If you want to play together, a seperate computer is needed for each mBot. On each laptop the installation procedure needs to be repeated.
 
