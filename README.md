@@ -9,7 +9,7 @@ If you're rich, you can set up up to 4 laptops (each connected to an mBot and ga
 - A usb game controller like [this one](https://www.kabelshop.nl/Gembird-Controller-pc-Gembird-2-controllers-USB-Vibratie-D-pad-10-knoppen-2-joysticks-JPD-UDV2-01-i24279-t1437173.html) (or coding skills to make it work with other controllers)
 ## Get it running
 - Download this repository as a zip file, **unblock** the zip file and extract it
-- Install [Python 3.11](https://www.python.org/)
+- Install [Python 3.12](https://www.python.org/)
 - Install the following Python libraries:
 ```
 pip install cython
@@ -17,7 +17,7 @@ pip install pyserial
 pip install hidapi
 pip install pygame 
 ```
-- **NOTE** - @2023-11-07 installing the *hidapi* library failed when using Python 3.12. On Python 3.11 it works...
+
 - **NOTE** - On Windows, pip.exe is usually installed in *C:\Users\YourUserName\AppData\Local\Programs\Python\Python311\Scripts\pip.exe* (change *YourUserName* and Python version) and might be added to the path. If pip is not recognized, add its folder to your PATH environment variable, or adapt and run the helper script **install_libs.bat**
 - Connect the game controller and the mBot 2.4GHz dongle
 - Run **mbot-hap.py**:
