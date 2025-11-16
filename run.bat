@@ -1,2 +1,2 @@
 cd src
-%USERPROFILE%\AppData\Local\Programs\Python\Python311\python.exe mbot-hap.py
+%USERPROFILE%\AppData\Local\Programs\Python\Python312\python.exe mbot-hap.py
